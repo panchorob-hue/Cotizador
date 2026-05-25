@@ -617,6 +617,16 @@
         </tr>
       </thead>
       <tbody id="items-body"></tbody>
+      <tfoot>
+        <tr id="tfoot-row" style="background:var(--bg2);border-top:1.5px solid var(--border2)">
+          <td colspan="3" style="padding:6px 8px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3);text-align:right">Subtotales</td>
+          <td class="tr" id="tfoot-precio" style="padding:6px 5px;font-weight:600;color:var(--text2);font-size:11.5px;border:0.5px solid var(--border)"></td>
+          <td style="border:0.5px solid var(--border)"></td>
+          <td class="tr disc-cell" id="tfoot-desc" style="padding:6px 5px;font-size:11.5px;border:0.5px solid var(--border)"></td>
+          <td class="tr bold-cell" id="tfoot-final" style="padding:6px 5px;font-size:12px;border:0.5px solid var(--border)"></td>
+          <td style="border:0.5px solid var(--border)"></td>
+        </tr>
+      </tfoot>
     </table>
   </div>
   <button class="btn-add" onclick="addRow()"><i class="ti ti-plus"></i> Agregar ítem</button>
@@ -632,7 +642,7 @@
       </div>
     </div>
     <div class="totales">
-      <div class="tot-input-row"><label>Despacho e instalación $</label><input type="number" id="despacho-val" min="0" value="0" oninput="recalc()"></div>
+      <div class="tot-input-row"><label>Despacho e instalación $</label><input type="number" id="despacho-val" min="0" value="" placeholder="0" oninput="recalc()"></div>
       <div class="tot-row"><span class="lbl">Subtotal</span><span id="tot-subtotal">$ 0</span></div>
       <div class="tot-row"><span class="lbl">Despacho</span><span id="tot-despacho">$ 0</span></div>
       <div class="tot-row final"><span class="lbl">Total final</span><span id="tot-final">$ 0</span></div>
@@ -873,7 +883,9 @@ function getRowInputs(id) {
 
 function calcRow(id) {
   const d = getRowInputs(id); if (!d) return;
-  const tot = d.cant * d.precio; const dm = tot * (d.descp / 100); const pf = tot - dm;
+  const tot = d.cant * d.precio;
+  const dm = tot * (d.descp / 100);
+  const pf = tot - dm;
   document.getElementById('descm-' + id).textContent = dm > 0 ? '-' + fmt(dm) : '$ 0';
   document.getElementById('pfinal-' + id).textContent = fmt(pf);
   recalc();
@@ -885,11 +897,26 @@ function delRow(id) {
 }
 
 function recalc() {
-  let sub = 0;
-  rows.forEach(id => { const d = getRowInputs(id); if (!d) return; const t = d.cant * d.precio; sub += t - (t * (d.descp / 100)); });
+  let sumPrecio = 0, sumDesc = 0, sumFinal = 0;
+  rows.forEach(id => {
+    const d = getRowInputs(id); if (!d) return;
+    const t = d.cant * d.precio;
+    const dm = t * (d.descp / 100);
+    sumPrecio += t;
+    sumDesc += dm;
+    sumFinal += t - dm;
+  });
   const desp = parseNum(document.getElementById('despacho-val').value);
-  const total = sub + desp;
-  document.getElementById('tot-subtotal').textContent = fmt(sub);
+  const total = sumFinal + desp;
+  // Fila de subtotales de tabla
+  const ft = document.getElementById('tfoot-row');
+  if (ft) {
+    document.getElementById('tfoot-precio').textContent = sumPrecio > 0 ? fmt(sumPrecio) : '';
+    document.getElementById('tfoot-desc').textContent = sumDesc > 0 ? '-' + fmt(sumDesc) : '';
+    document.getElementById('tfoot-final').textContent = sumFinal > 0 ? fmt(sumFinal) : '';
+  }
+  // Panel totales
+  document.getElementById('tot-subtotal').textContent = fmt(sumFinal);
   document.getElementById('tot-despacho').textContent = fmt(desp);
   document.getElementById('tot-final').textContent = fmt(total);
   document.getElementById('tot-abono').textContent = fmt(total * 0.5);
@@ -1028,6 +1055,7 @@ function buildPdfHtml() {
 
   // Ítems
   let itemsHtml = '';
+  let sumPrecioPdf = 0, sumDescPdf = 0, sumFinalPdf = 0;
   rows.forEach(id => {
     const tr = document.getElementById('row-' + id); if (!tr) return;
     const inp = tr.querySelectorAll('input');
@@ -1040,6 +1068,9 @@ function buildPdfHtml() {
     const dm = tot * (descp / 100);
     const pf = tot - dm;
     if (!desc && !precio) return;
+    sumPrecioPdf += tot;
+    sumDescPdf += dm;
+    sumFinalPdf += pf;
     itemsHtml += `<tr>
       <td style="text-align:center;padding:6px 5px;border:0.5px solid #ccc">${cant}</td>
       <td style="padding:6px 5px;border:0.5px solid #ccc">${desc}</td>
@@ -1164,6 +1195,15 @@ function buildPdfHtml() {
       </tr>
     </thead>
     <tbody>${itemsHtml}</tbody>
+    <tfoot>
+      <tr style="background:#f0ede8;border-top:1.5px solid #ccc">
+        <td colspan="3" style="padding:6px 8px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#999;text-align:right;border:0.5px solid #ccc">Subtotales</td>
+        <td style="text-align:right;padding:6px 5px;border:0.5px solid #ccc;font-weight:600;color:#555">${sumPrecioPdf > 0 ? fmt(sumPrecioPdf) : ''}</td>
+        <td style="border:0.5px solid #ccc"></td>
+        <td style="text-align:right;padding:6px 5px;border:0.5px solid #ccc;color:#b83232;font-weight:600">${sumDescPdf > 0 ? '-'+fmt(sumDescPdf) : ''}</td>
+        <td style="text-align:right;padding:6px 5px;border:0.5px solid #ccc;font-weight:700">${sumFinalPdf > 0 ? fmt(sumFinalPdf) : ''}</td>
+      </tr>
+    </tfoot>
   </table>
 
   <div class="bottom-grid">
@@ -1663,6 +1703,7 @@ function confirmarEditar() {
 const now = new Date();
 document.getElementById('fecha-hdr').textContent = now.toLocaleDateString('es-CL', { day:'2-digit', month:'long', year:'numeric' });
 document.getElementById('cli-fecha').value = now.toLocaleDateString('es-CL');
+document.getElementById('notas-txt').value = '** Incluye cojines de asiento en lámina de espuma de 12 cm de alto densidad 21, respaldos rellenos de espuma y pluma. Fundas en lona poliéster color elección (Filtro UV, repelente y fácil de lavar). Costura simple.';
 updateStats();
 addRow();
 recalc();

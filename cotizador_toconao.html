@@ -248,8 +248,9 @@
     background: var(--bg);
     color: var(--text);
     resize: vertical;
-    min-height: 70px;
+    min-height: 90px;
     line-height: 1.6;
+    overflow-y: visible;
     transition: border-color .15s;
   }
   textarea:focus { outline: none; border-color: var(--text); }
@@ -410,7 +411,22 @@
   .toast.show { opacity: 1; }
 
   /* ─── REPOSITORIO ─── */
-  .repo-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .repo-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+  .th-sort { cursor: pointer; user-select: none; }
+  .th-sort:hover { color: var(--text); }
+  .repo-tab { font-size: 12px; font-weight: 500; padding: 7px 16px; border-radius: 20px; border: 0.5px solid var(--border2); background: none; color: var(--text2); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all .15s; }
+  .repo-tab:hover { background: var(--bg3); color: var(--text); }
+  .repo-tab.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .repo-filters { display: flex; gap: 8px; margin-bottom: 12px; }
+  .repo-panel { display: none; }
+  .repo-panel.active { display: block; }
+  .pago-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; background: rgba(26,122,60,0.1); color: #1a7a3c; font-weight: 600; cursor: pointer; }
+  .pago-badge:hover { background: rgba(26,122,60,0.2); }
+  .pago-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; flex-wrap: wrap; }
+  .pago-item { background: var(--bg2); border: 0.5px solid var(--border); border-radius: 6px; padding: 5px 10px; font-size: 11px; color: var(--text2); line-height: 1.5; }
+  .pago-item strong { color: var(--text); display: block; font-size: 12px; }
+  .progreso-bar { height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; margin-top: 4px; }
+  .progreso-fill { height: 100%; background: #1a7a3c; border-radius: 3px; transition: width .3s; }
   .repo-header h2 { font-size: 18px; font-weight: 600; }
   .repo-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 16px; }
   .stat-card {
@@ -747,11 +763,13 @@
 <!-- ═══════════════ REPOSITORIO VIEW ═══════════════ -->
 <div class="view" id="view-repo">
   <div class="repo-header">
-    <h2><i class="ti ti-archive" style="font-size:20px;vertical-align:-3px;margin-right:6px"></i>Repositorio de Cotizaciones</h2>
+    <h2><i class="ti ti-archive" style="font-size:20px;vertical-align:-3px;margin-right:6px"></i>Repositorio</h2>
     <button class="new-cot-btn" onclick="switchView('cotizador');limpiar()">
       <i class="ti ti-plus"></i> Nueva Cotización
     </button>
   </div>
+
+  <!-- Stats -->
   <div class="repo-stats">
     <div class="stat-card"><div class="stat-label">Total</div><div class="stat-val" id="stat-total">0</div><div class="stat-sub">guardadas</div></div>
     <div class="stat-card" style="border-top:3px solid #1a5cbf"><div class="stat-label">Cotizado</div><div class="stat-val" id="stat-cotizado" style="color:#1a5cbf">0</div></div>
@@ -759,15 +777,93 @@
     <div class="stat-card" style="border-top:3px solid #b83232"><div class="stat-label">No interesado</div><div class="stat-val" id="stat-noint" style="color:#b83232">0</div></div>
     <div class="stat-card" style="border-top:3px solid #1a7a3c"><div class="stat-label">Ventas</div><div class="stat-val" id="stat-ventas" style="color:#1a7a3c">0</div><div class="stat-sub">confirmadas</div></div>
   </div>
-  <div class="repo-table-wrap">
-    <div class="repo-table-header">
-      <div>N°</div><div>Cliente</div><div>Fecha</div><div>Total</div><div>Vendedor</div><div>Estado</div><div>Acciones</div>
-    </div>
-    <div id="repo-list">
-      <div class="empty-repo">
-        <i class="ti ti-file-off"></i>
-        <p>Aún no hay cotizaciones guardadas.<br>Crea una nueva y presiona <strong>Guardar</strong>.</p>
+
+  <!-- Sub-tabs -->
+  <div class="repo-tabs">
+    <button class="repo-tab active" id="tab-cot" onclick="setRepoTab('cot')"><i class="ti ti-file-invoice"></i> Cotizaciones</button>
+    <button class="repo-tab" id="tab-ventas" onclick="setRepoTab('ventas')"><i class="ti ti-shopping-cart"></i> Ventas</button>
+    <button class="repo-tab" id="tab-noint" onclick="setRepoTab('noint')"><i class="ti ti-user-off"></i> No Interesados</button>
+  </div>
+
+  <!-- Filters -->
+  <div class="repo-filters">
+    <select id="filter-vendedor" onchange="renderRepo()" style="font-family:inherit;font-size:12px;padding:5px 10px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);height:32px">
+      <option value="">Todos los vendedores</option>
+      <option>Vero Barahona</option>
+      <option>Sole Pita</option>
+      <option>Vendedor 2</option>
+    </select>
+    <select id="filter-estado" onchange="renderRepo()" style="font-family:inherit;font-size:12px;padding:5px 10px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);height:32px">
+      <option value="">Todos los estados</option>
+      <option value="cotizado">Cotizado</option>
+      <option value="seg1">Seguimiento 1</option>
+      <option value="seg2">Seguimiento 2</option>
+      <option value="seg3">Seguimiento 3</option>
+    </select>
+  </div>
+
+  <!-- Cotizaciones table -->
+  <div id="panel-cot" class="repo-panel active">
+    <div class="repo-table-wrap">
+      <div class="repo-table-header">
+        <div class="th-sort" onclick="sortTable('cot','num')">N° <span id="sort-cot-num"></span></div>
+        <div class="th-sort" onclick="sortTable('cot','cliente')">Cliente <span id="sort-cot-cliente"></span></div>
+        <div class="th-sort" onclick="sortTable('cot','fecha')">Fecha <span id="sort-cot-fecha"></span></div>
+        <div class="th-sort" onclick="sortTable('cot','total')">Total <span id="sort-cot-total"></span></div>
+        <div class="th-sort" onclick="sortTable('cot','vendedor')">Vendedor <span id="sort-cot-vendedor"></span></div>
+        <div>Estado</div><div>Acciones</div>
       </div>
+      <div id="repo-list"><div class="empty-repo"><i class="ti ti-file-off"></i><p>Sin cotizaciones.</p></div></div>
+    </div>
+  </div>
+
+  <!-- Ventas table -->
+  <div id="panel-ventas" class="repo-panel">
+    <div class="repo-filters" id="filters-ventas" style="display:none">
+      <select id="filter-ventas-mes" onchange="renderRepo()" style="font-family:inherit;font-size:12px;padding:5px 10px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);height:32px">
+        <option value="mes-actual">Este mes</option>
+        <option value="">Todos los meses</option>
+      </select>
+      <select id="filter-ventas-vendedor" onchange="renderRepo()" style="font-family:inherit;font-size:12px;padding:5px 10px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);height:32px">
+        <option value="">Todos los vendedores</option>
+        <option>Vero Barahona</option>
+        <option>Sole Pita</option>
+        <option>Vendedor 2</option>
+      </select>
+    </div>
+    <div class="repo-table-wrap">
+      <div class="repo-table-header" style="grid-template-columns:55px 1fr 110px 100px 110px 140px 100px">
+        <div class="th-sort" onclick="sortTable('ventas','num')">N° <span id="sort-ventas-num"></span></div>
+        <div class="th-sort" onclick="sortTable('ventas','cliente')">Cliente <span id="sort-ventas-cliente"></span></div>
+        <div class="th-sort" onclick="sortTable('ventas','fecha')">Fecha <span id="sort-ventas-fecha"></span></div>
+        <div class="th-sort" onclick="sortTable('ventas','total')">Total <span id="sort-ventas-total"></span></div>
+        <div class="th-sort" onclick="sortTable('ventas','vendedor')">Vendedor <span id="sort-ventas-vendedor"></span></div>
+        <div>Pagos</div><div>Acciones</div>
+      </div>
+      <div id="ventas-list"><div class="empty-repo"><i class="ti ti-shopping-cart"></i><p>Sin ventas confirmadas.</p></div></div>
+    </div>
+  </div>
+
+  <!-- No Interesados table -->
+  <div id="panel-noint" class="repo-panel">
+    <div class="repo-filters" id="filters-noint" style="display:none">
+      <select id="filter-noint-vendedor" onchange="renderRepo()" style="font-family:inherit;font-size:12px;padding:5px 10px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);height:32px">
+        <option value="">Todos los vendedores</option>
+        <option>Vero Barahona</option>
+        <option>Sole Pita</option>
+        <option>Vendedor 2</option>
+      </select>
+    </div>
+    <div class="repo-table-wrap">
+      <div class="repo-table-header" style="grid-template-columns:55px 1fr 110px 100px 110px 90px">
+        <div class="th-sort" onclick="sortTable('noint','num')">N° <span id="sort-noint-num"></span></div>
+        <div class="th-sort" onclick="sortTable('noint','cliente')">Cliente <span id="sort-noint-cliente"></span></div>
+        <div class="th-sort" onclick="sortTable('noint','fecha')">Fecha <span id="sort-noint-fecha"></span></div>
+        <div class="th-sort" onclick="sortTable('noint','total')">Total <span id="sort-noint-total"></span></div>
+        <div class="th-sort" onclick="sortTable('noint','vendedor')">Vendedor <span id="sort-noint-vendedor"></span></div>
+        <div>Acciones</div>
+      </div>
+      <div id="noint-list"><div class="empty-repo"><i class="ti ti-user-off"></i><p>Sin clientes no interesados.</p></div></div>
     </div>
   </div>
 </div>
@@ -794,6 +890,35 @@
     <div class="modal-btns">
       <button class="m-cancel" onclick="closeModal('modal-venta')">Cancelar</button>
       <button class="m-confirm orange" onclick="confirmarVenta()">Confirmar venta</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-pagos">
+  <div class="modal" style="width:400px">
+    <h3>Pagos — <span id="pagos-cliente-nombre"></span></h3>
+    <p id="pagos-total-info" style="margin-bottom:12px"></p>
+    <div class="progreso-bar" style="margin-bottom:14px"><div class="progreso-fill" id="pagos-progreso" style="width:0%"></div></div>
+    <div id="pagos-lista" style="margin-bottom:14px;max-height:180px;overflow-y:auto"></div>
+    <div style="border-top:0.5px solid var(--border);padding-top:12px">
+      <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.06em">Agregar pago</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+        <div class="m-field">
+          <label>Modo de pago</label>
+          <select id="pago-modo" style="font-family:inherit;font-size:12px;padding:5px 8px;border:0.5px solid var(--border2);border-radius:5px;background:var(--bg);color:var(--text);height:30px;width:100%">
+            <option>Transferencia</option>
+            <option>Efectivo</option>
+            <option>Tarjeta débito</option>
+            <option>Tarjeta crédito</option>
+          </select>
+        </div>
+        <div class="m-field"><label>Monto $</label><input type="number" id="pago-monto" placeholder="0" style="font-family:inherit;font-size:12px;padding:5px 8px;border:0.5px solid var(--border2);border-radius:5px;background:var(--bg);color:var(--text);height:30px;width:100%"></div>
+        <div class="m-field"><label>Fecha</label><input type="text" id="pago-fecha" placeholder="dd/mm/aaaa" style="font-family:inherit;font-size:12px;padding:5px 8px;border:0.5px solid var(--border2);border-radius:5px;background:var(--bg);color:var(--text);height:30px;width:100%"></div>
+      </div>
+      <button class="m-confirm" style="width:100%;margin-bottom:0" onclick="agregarPago()">+ Agregar pago</button>
+    </div>
+    <div class="modal-btns" style="margin-top:10px">
+      <button class="m-cancel" onclick="closeModal('modal-pagos')">Cerrar</button>
     </div>
   </div>
 </div>
@@ -847,18 +972,26 @@ cotizacionesRef.orderBy('fechaMs', 'desc').onSnapshot(snapshot => {
   cotizaciones = snapshot.docs.map(doc => ({ _docId: doc.id, ...doc.data() }));
   updateStats();
   if (document.getElementById('view-repo').classList.contains('active')) renderRepo();
-  // Mostrar estado conectado
+  // Actualizar modal de pagos si está abierto
+  if (pagosCotId && document.getElementById('modal-pagos').classList.contains('show')) {
+    const cot = cotizaciones.find(c => c._docId === pagosCotId);
+    if (cot) { renderPagosList(cot.pagos || []); abrirPagos(pagosCotId); }
+  }
   const st = document.getElementById('fb-status');
   if (st) { st.textContent = '● En línea'; st.style.background = 'rgba(26,122,60,0.12)'; st.style.color = '#1a7a3c'; }
 }, err => {
-  console.error('Firebase error:', err);
   const st = document.getElementById('fb-status');
   if (st) { st.textContent = '● Sin conexión'; st.style.background = 'rgba(184,50,50,0.1)'; st.style.color = '#b83232'; }
 });
 
 // ─── UTILS ───
 function fmt(n) { return '$ ' + Math.round(n).toLocaleString('es-CL'); }
-function parseNum(v) { return parseFloat(String(v).replace(/[^0-9.\-]/g,'')) || 0; }
+function parseNum(v) {
+  if (!v && v !== 0) return 0;
+  // Remover $ y espacios, reemplazar puntos de miles, manejar coma decimal
+  const s = String(v).replace(/[$\s]/g,'').replace(/\./g,'').replace(',','.');
+  return parseFloat(s) || 0;
+}
 function showToast(msg, duration) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
@@ -1344,9 +1477,17 @@ async function enviarWhatsApp() {
 
   const paper = document.querySelector('.paper');
 
+  // Reemplazar textarea con div para captura completa
+  const notasEl = document.getElementById('notas-txt');
+  const notasVal = notasEl.value;
+  const notasProxy = document.createElement('div');
+  notasProxy.style.cssText = `font-family:inherit;font-size:11.5px;padding:8px 10px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);line-height:1.6;white-space:pre-wrap;min-height:70px;width:100%;box-sizing:border-box`;
+  notasProxy.textContent = notasVal;
+  notasEl.parentNode.replaceChild(notasProxy, notasEl);
+
   try {
     const canvas = await html2canvas(paper, {
-      scale: 4,
+      scale: 3,
       useCORS: true,
       backgroundColor: '#ffffff',
       logging: false,
@@ -1379,6 +1520,10 @@ async function enviarWhatsApp() {
   } finally {
     actionSection.style.display = '';
     topNav.style.display = '';
+    // Restaurar textarea
+    if (notasProxy && notasProxy.parentNode) {
+      notasProxy.parentNode.replaceChild(notasEl, notasProxy);
+    }
   }
 }
 
@@ -1397,9 +1542,17 @@ async function enviarInstagram() {
 
   const paper = document.querySelector('.paper');
 
+  // Reemplazar textarea con div para captura completa
+  const notasElIG = document.getElementById('notas-txt');
+  const notasValIG = notasElIG.value;
+  const notasProxyIG = document.createElement('div');
+  notasProxyIG.style.cssText = `font-family:inherit;font-size:11.5px;padding:8px 10px;border:0.5px solid #ddd;border-radius:8px;background:#fff;color:#1a1a18;line-height:1.6;white-space:pre-wrap;min-height:70px;width:100%;box-sizing:border-box`;
+  notasProxyIG.textContent = notasValIG;
+  notasElIG.parentNode.replaceChild(notasProxyIG, notasElIG);
+
   try {
     const canvas = await html2canvas(paper, {
-      scale: 2,
+      scale: 3,
       useCORS: true,
       backgroundColor: '#ffffff',
       logging: false,
@@ -1434,6 +1587,9 @@ async function enviarInstagram() {
   } finally {
     actionSection.style.display = '';
     topNav.style.display = '';
+    if (notasProxyIG && notasProxyIG.parentNode) {
+      notasProxyIG.parentNode.replaceChild(notasElIG, notasProxyIG);
+    }
   }
 }
 function pasarAVenta() {
@@ -1526,20 +1682,12 @@ document.addEventListener('click', function(e) {
 async function cambiarEstadoCustom(docId, nuevoEstado, optionEl) {
   const est = getEstadoInfo(nuevoEstado);
   const [bg, color] = ESTADO_COLORS[est.cls] || ESTADO_COLORS['s-cotizado'];
-  // Actualizar badge visualmente
-  const badge = document.querySelector(`#wrap-${docId} .estado-badge`);
-  if (badge) { badge.textContent = est.label; badge.style.background = bg; badge.style.color = color; badge.innerHTML = est.label; }
-  // Cerrar dropdown
   const drop = document.getElementById('drop-' + docId);
   if (drop) drop.classList.remove('open');
-  // Guardar en Firebase
-  const cot = cotizaciones.find(c => c._docId === docId);
-  if (cot) {
-    try {
-      await cotizacionesRef.doc(docId).update({ estado: nuevoEstado });
-      updateStats();
-    } catch(e) { console.error(e); }
-  }
+  try {
+    await cotizacionesRef.doc(docId).update({ estado: nuevoEstado });
+    updateStats();
+  } catch(e) { console.error(e); }
 }
 
 async function cambiarEstado(docId, nuevoEstado, selEl) {
@@ -1549,45 +1697,233 @@ async function cambiarEstado(docId, nuevoEstado, selEl) {
   }
 }
 
+// ─── SORT STATE ───
+const sortState = { cot: { col: 'fecha', dir: -1 }, ventas: { col: 'fecha', dir: -1 }, noint: { col: 'fecha', dir: -1 } };
+
+function sortTable(tab, col) {
+  const s = sortState[tab];
+  if (s.col === col) s.dir *= -1;
+  else { s.col = col; s.dir = 1; }
+  // Update indicators
+  ['num','cliente','fecha','total','vendedor'].forEach(c => {
+    const el = document.getElementById(`sort-${tab}-${c}`);
+    if (el) el.textContent = c === col ? (s.dir === 1 ? ' ↑' : ' ↓') : '';
+  });
+  renderRepo();
+}
+
+function applySort(arr, tab) {
+  const { col, dir } = sortState[tab];
+  return [...arr].sort((a, b) => {
+    let va = a[col] || '', vb = b[col] || '';
+    if (col === 'total') { va = parseNum(va); vb = parseNum(vb); return (va - vb) * dir; }
+    return String(va).localeCompare(String(vb), 'es') * dir;
+  });
+}
+
+function getMesActual() {
+  const n = new Date();
+  return `${String(n.getMonth()+1).padStart(2,'0')}-${n.getFullYear()}`;
+}
+
+function parseFechaMes(fechaStr) {
+  // Fecha formato dd-mm-yyyy o dd/mm/yyyy
+  if (!fechaStr) return '';
+  const parts = fechaStr.split(/[-\/]/);
+  if (parts.length === 3) return `${parts[1].padStart(2,'0')}-${parts[2]}`;
+  return '';
+}
+
+// ─── REPO TAB ───
+let currentRepoTab = 'cot';
+function setRepoTab(tab) {
+  currentRepoTab = tab;
+  document.querySelectorAll('.repo-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.repo-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  document.getElementById('panel-' + tab).classList.add('active');
+  // Filters visibility
+  document.querySelector('.repo-filters').style.display = tab === 'cot' ? 'flex' : 'none';
+  const fv = document.getElementById('filters-ventas');
+  const fn = document.getElementById('filters-noint');
+  if (fv) fv.style.display = tab === 'ventas' ? 'flex' : 'none';
+  if (fn) fn.style.display = tab === 'noint' ? 'flex' : 'none';
+  renderRepo();
+}
+
 function renderRepo() {
-  const list = document.getElementById('repo-list');
-  if (cotizaciones.length === 0) {
-    list.innerHTML = '<div class="empty-repo"><i class="ti ti-file-off"></i><p>Aún no hay cotizaciones guardadas.<br>Crea una nueva y presiona <strong>Guardar</strong>.</p></div>';
-    updateStats(); return;
-  }
-  list.innerHTML = cotizaciones.map(c => {
-    const est = getEstadoInfo(c.estado || 'cotizado');
-    const docId = c._docId || '';
-    const [bg, color] = ESTADO_COLORS[est.cls] || ESTADO_COLORS['s-cotizado'];
-    const optsHtml = ESTADOS.map(e => {
-      const [ebg, ecolor] = ESTADO_COLORS[e.cls];
-      return `<div class="estado-option" onclick="cambiarEstadoCustom('${docId}', '${e.val}', this)" data-val="${e.val}">
-        <span class="estado-dot" style="background:${ecolor}"></span>
-        <span style="color:var(--color-text-primary)">${e.label}</span>
-      </div>`;
-    }).join('');
-    return `<div class="repo-row">
-      <div style="font-weight:600;color:var(--text2)">N°${c.num}</div>
-      <div style="font-weight:500">${c.cliente}</div>
-      <div style="color:var(--text2)">${c.fecha}</div>
-      <div style="font-weight:600">${c.total}</div>
-      <div style="font-size:11px;color:var(--text2)">${c.vendedor || '—'}</div>
-      <div>
-        <div class="estado-wrap" id="wrap-${docId}">
-          <div class="estado-badge" style="background:${bg};color:${color}" onclick="toggleEstadoDropdown('${docId}')">
-            ${est.label}
-          </div>
-          <div class="estado-dropdown" id="drop-${docId}">${optsHtml}</div>
+  const fVendedor = document.getElementById('filter-vendedor').value;
+  const fEstado = document.getElementById('filter-estado').value;
+  const fVentasMes = document.getElementById('filter-ventas-mes') ? document.getElementById('filter-ventas-mes').value : 'mes-actual';
+  const fVentasVendedor = document.getElementById('filter-ventas-vendedor') ? document.getElementById('filter-ventas-vendedor').value : '';
+  const fNointVendedor = document.getElementById('filter-noint-vendedor') ? document.getElementById('filter-noint-vendedor').value : '';
+
+  const mesActual = getMesActual();
+
+  const cotList = document.getElementById('repo-list');
+  const ventasList = document.getElementById('ventas-list');
+  const nointList = document.getElementById('noint-list');
+
+  // ── Cotizaciones ──
+  let cots = cotizaciones.filter(c => !c.estado || (c.estado !== 'venta' && c.estado !== 'noint'));
+  if (fVendedor) cots = cots.filter(c => c.vendedor === fVendedor);
+  if (fEstado) cots = cots.filter(c => (c.estado || 'cotizado') === fEstado);
+  cots = applySort(cots, 'cot');
+  cotList.innerHTML = cots.length === 0
+    ? '<div class="empty-repo"><i class="ti ti-file-off"></i><p>Sin cotizaciones.</p></div>'
+    : cots.map(c => renderCotRow(c)).join('');
+
+  // ── Ventas ──
+  let ventas = cotizaciones.filter(c => c.estado === 'venta');
+  if (fVentasMes === 'mes-actual') ventas = ventas.filter(c => parseFechaMes(c.fecha) === mesActual);
+  if (fVentasVendedor) ventas = ventas.filter(c => c.vendedor === fVentasVendedor);
+  ventas = applySort(ventas, 'ventas');
+  ventasList.innerHTML = ventas.length === 0
+    ? '<div class="empty-repo"><i class="ti ti-shopping-cart"></i><p>Sin ventas' + (fVentasMes === 'mes-actual' ? ' este mes' : '') + '.</p></div>'
+    : ventas.map(c => renderVentaRow(c)).join('');
+
+  // ── No Interesados ──
+  let noints = cotizaciones.filter(c => c.estado === 'noint');
+  if (fNointVendedor) noints = noints.filter(c => c.vendedor === fNointVendedor);
+  noints = applySort(noints, 'noint');
+  nointList.innerHTML = noints.length === 0
+    ? '<div class="empty-repo"><i class="ti ti-user-off"></i><p>Sin clientes no interesados.</p></div>'
+    : noints.map(c => `<div class="repo-row" style="grid-template-columns:55px 1fr 110px 100px 110px 90px">
+        <div style="font-weight:600;color:var(--text2)">N°${c.num}</div>
+        <div style="font-weight:500">${c.cliente}</div>
+        <div style="color:var(--text2)">${c.fecha}</div>
+        <div style="font-weight:600">${c.total}</div>
+        <div style="font-size:11px;color:var(--text2)">${c.vendedor || '—'}</div>
+        <div class="repo-actions">
+          <button class="repo-btn" onclick="editarDesdeRepo('${c._docId}')" title="Editar" style="color:#7b3fbf"><i class="ti ti-pencil"></i></button>
+          <button class="repo-btn" onclick="eliminarCot('${c._docId}')" title="Eliminar" style="color:var(--red)"><i class="ti ti-trash"></i></button>
         </div>
-      </div>
-      <div class="repo-actions">
-        <button class="repo-btn" onclick="editarDesdeRepo('${docId}')" title="Editar" style="color:#7b3fbf"><i class="ti ti-pencil"></i></button>
-        <button class="repo-btn" onclick="eliminarCot('${docId}')" title="Eliminar" style="color:var(--red)"><i class="ti ti-trash"></i></button>
-      </div>
-    </div>`;
-  }).join('');
+      </div>`).join('');
+
   document.querySelectorAll('.estado-dropdown').forEach(d => d.classList.remove('open'));
   updateStats();
+}
+
+function renderCotRow(c) {
+  const est = getEstadoInfo(c.estado || 'cotizado');
+  const docId = c._docId || '';
+  const [bg, color] = ESTADO_COLORS[est.cls] || ESTADO_COLORS['s-cotizado'];
+  const opts = ESTADOS.filter(e => e.val !== 'venta' && e.val !== 'noint').map(e => {
+    const [ebg, ecolor] = ESTADO_COLORS[e.cls];
+    return `<div class="estado-option" onclick="cambiarEstadoCustom('${docId}', '${e.val}', this)" data-val="${e.val}">
+      <span class="estado-dot" style="background:${ecolor}"></span>
+      <span>${e.label}</span>
+    </div>`;
+  }).join('') +
+  `<div style="border-top:0.5px solid var(--border);margin:4px 0"></div>
+   <div class="estado-option" onclick="cambiarEstadoCustom('${docId}', 'venta', this)" data-val="venta" style="color:#1a7a3c"><span class="estado-dot" style="background:#1a7a3c"></span> Venta</div>
+   <div class="estado-option" onclick="cambiarEstadoCustom('${docId}', 'noint', this)" data-val="noint" style="color:#b83232"><span class="estado-dot" style="background:#b83232"></span> No Interesado</div>`;
+  return `<div class="repo-row">
+    <div style="font-weight:600;color:var(--text2)">N°${c.num}</div>
+    <div style="font-weight:500">${c.cliente}</div>
+    <div style="color:var(--text2)">${c.fecha}</div>
+    <div style="font-weight:600">${c.total}</div>
+    <div style="font-size:11px;color:var(--text2)">${c.vendedor || '—'}</div>
+    <div>
+      <div class="estado-wrap" id="wrap-${docId}">
+        <div class="estado-badge" style="background:${bg};color:${color}" onclick="toggleEstadoDropdown('${docId}')">${est.label}</div>
+        <div class="estado-dropdown" id="drop-${docId}">${opts}</div>
+      </div>
+    </div>
+    <div class="repo-actions">
+      <button class="repo-btn" onclick="editarDesdeRepo('${docId}')" title="Editar" style="color:#7b3fbf"><i class="ti ti-pencil"></i></button>
+      <button class="repo-btn" onclick="eliminarCot('${docId}')" title="Eliminar" style="color:var(--red)"><i class="ti ti-trash"></i></button>
+    </div>
+  </div>`;
+}
+
+function renderVentaRow(c) {
+  const docId = c._docId || '';
+  const pagos = c.pagos || [];
+  const totalNum = parseNum(c.total);
+  const sumPagos = pagos.reduce((a, p) => a + parseNum(p.monto), 0);
+  const pct = totalNum > 0 ? Math.min(100, Math.round(sumPagos / totalNum * 100)) : 0;
+  const saldo = totalNum - sumPagos;
+  const isPagado = saldo <= 0;
+  const semaforo = isPagado ? '#1a7a3c' : '#b83232';
+  return `<div class="repo-row" style="grid-template-columns:55px 1fr 110px 100px 110px 140px 90px">
+    <div style="font-weight:600;color:var(--text2)">N°${c.num}</div>
+    <div style="font-weight:500">${c.cliente}</div>
+    <div style="color:var(--text2)">${c.fecha}</div>
+    <div style="font-weight:600">${c.total}</div>
+    <div style="font-size:11px;color:var(--text2)">${c.vendedor || '—'}</div>
+    <div>
+      <div style="font-size:11.5px;font-weight:500;color:var(--text);margin-bottom:2px">
+        ${fmt(sumPagos)} / ${c.total}
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        <div class="progreso-bar" style="flex:1"><div class="progreso-fill" style="width:${pct}%;background:${semaforo}"></div></div>
+        <span style="font-size:10px;font-weight:600;color:${semaforo};white-space:nowrap">${pct}% ${isPagado ? '✓' : '●'}</span>
+      </div>
+    </div>
+    <div class="repo-actions">
+      <button class="repo-btn" onclick="abrirPagos('${docId}')" title="Pagos" style="color:#1a7a3c;font-weight:600;font-size:12px;padding:4px 8px;gap:3px;display:flex;align-items:center"><i class="ti ti-cash"></i> $</button>
+      <button class="repo-btn" onclick="editarDesdeRepo('${docId}')" title="Editar" style="color:#7b3fbf"><i class="ti ti-pencil"></i></button>
+      <button class="repo-btn" onclick="eliminarCot('${docId}')" title="Eliminar" style="color:var(--red)"><i class="ti ti-trash"></i></button>
+    </div>
+  </div>`;
+}
+
+// ─── PAGOS ───
+let pagosCotId = null;
+function abrirPagos(docId) {
+  pagosCotId = docId;
+  const cot = cotizaciones.find(c => c._docId === docId);
+  if (!cot) return;
+  document.getElementById('pagos-cliente-nombre').textContent = cot.cliente;
+  const totalNum = parseNum(cot.total);
+  const pagos = cot.pagos || [];
+  const sumPagos = pagos.reduce((a, p) => a + parseNum(p.monto), 0);
+  const pct = totalNum > 0 ? Math.min(100, Math.round(sumPagos / totalNum * 100)) : 0;
+  document.getElementById('pagos-total-info').innerHTML = `Total: <strong>${cot.total}</strong> · Pagado: <strong>${fmt(sumPagos)}</strong> · Saldo: <strong style="color:${totalNum-sumPagos>0?'#b83232':'#1a7a3c'}">${fmt(totalNum - sumPagos)}</strong>`;
+  document.getElementById('pagos-progreso').style.width = pct + '%';
+  document.getElementById('pago-fecha').value = new Date().toLocaleDateString('es-CL');
+  document.getElementById('pago-monto').value = '';
+  renderPagosList(pagos);
+  document.getElementById('modal-pagos').classList.add('show');
+}
+
+function renderPagosList(pagos) {
+  const lista = document.getElementById('pagos-lista');
+  if (!pagos || pagos.length === 0) {
+    lista.innerHTML = '<p style="font-size:11px;color:var(--text3);text-align:center;padding:8px">Sin pagos registrados</p>';
+    return;
+  }
+  lista.innerHTML = pagos.map((p, i) => `
+    <div class="pago-item" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <div>
+        <strong>$ ${parseNum(p.monto).toLocaleString('es-CL')}</strong>
+        <span style="color:var(--text3);font-size:10px;margin-left:6px">${p.modo} · ${p.fecha}</span>
+      </div>
+      <button onclick="eliminarPago(${i})" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:13px"><i class="ti ti-x"></i></button>
+    </div>`).join('');
+}
+
+async function agregarPago() {
+  const cot = cotizaciones.find(c => c._docId === pagosCotId);
+  if (!cot) return;
+  const monto = parseNum(document.getElementById('pago-monto').value);
+  if (!monto) { showToast('Ingresá un monto'); return; }
+  const modo = document.getElementById('pago-modo').value;
+  const fecha = document.getElementById('pago-fecha').value;
+  const pagos = [...(cot.pagos || []), { monto, modo, fecha }];
+  try {
+    await cotizacionesRef.doc(pagosCotId).update({ pagos });
+    document.getElementById('pago-monto').value = '';
+    showToast('✓ Pago registrado');
+  } catch(e) { console.error(e); }
+}
+
+async function eliminarPago(idx) {
+  const cot = cotizaciones.find(c => c._docId === pagosCotId);
+  if (!cot) return;
+  const pagos = (cot.pagos || []).filter((_, i) => i !== idx);
+  try { await cotizacionesRef.doc(pagosCotId).update({ pagos }); } catch(e) { console.error(e); }
 }
 
 function editarDesdeRepo(docId) {
@@ -1745,11 +2081,20 @@ function confirmarEditar() {
   showToast('✓ Cotización actualizada');
 }
 
+// Auto-expand textarea
+document.getElementById('notas-txt').addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = this.scrollHeight + 'px';
+});
+
 // ─── INIT ───
 const now = new Date();
 document.getElementById('fecha-hdr').textContent = now.toLocaleDateString('es-CL', { day:'2-digit', month:'long', year:'numeric' });
 document.getElementById('cli-fecha').value = now.toLocaleDateString('es-CL');
-document.getElementById('notas-txt').value = 'Incluye cojines de asiento en lámina de espuma de 12 cm de alto densidad 21, respaldos rellenos de espuma y pluma. Fundas en lona poliéster color elección (Filtro UV, repelente y fácil de lavar). Costura simple.';
+const notasTxt = document.getElementById('notas-txt');
+notasTxt.value = 'Incluye cojines de asiento en lámina de espuma de 12 cm de alto densidad 21.\nRespaldos rellenos de espuma y pluma.\nFundas en lona poliéster color elección (Filtro UV, repelente y fácil de lavar).\nCostura simple.';
+notasTxt.style.height = 'auto';
+notasTxt.style.height = notasTxt.scrollHeight + 'px';
 updateStats();
 recalc();
 </script>
